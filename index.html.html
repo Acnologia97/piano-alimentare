@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Piano Alimentare 16/8 · Tennis</title>
+<style>
+:root {
+  --verde: #2d7a4f;
+  --verde-light: #e8f5ee;
+  --verde-mid: #a8d5b5;
+  --verde-dark: #1a5235;
+  --blu: #1a5fa8;
+  --blu-light: #e8f1fb;
+  --arancio: #e07820;
+  --arancio-light: #fdf0e0;
+  --rosso: #c0392b;
+  --rosso-light: #fdeaea;
+  --viola: #7b4fa6;
+  --viola-light: #f3edfb;
+  --grigio-bg: #f5f5f2;
+  --grigio-card: #ffffff;
+  --grigio-border: #e0ddd8;
+  --testo: #1a1a18;
+  --testo-sec: #555550;
+  --testo-muted: #888880;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--grigio-bg); color: var(--testo); line-height: 1.5; min-height: 100vh; }
+
+/* HERO */
+.hero { background: var(--verde); color: white; padding: 1.5rem 1rem 1.2rem; }
+.hero-inner { max-width: 900px; margin: 0 auto; }
+.hero h1 { font-size: 22px; font-weight: 700; margin-bottom: 3px; }
+.hero p { font-size: 13px; opacity: 0.85; margin-bottom: 12px; }
+.pillole { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: rgba(255,255,255,0.2); color: white; }
+
+/* NAV */
+.nav { background: white; border-bottom: 1px solid var(--grigio-border); position: sticky; top: 0; z-index: 100; }
+.nav-inner { max-width: 900px; margin: 0 auto; display: flex; }
+.nav-btn { flex: 1; padding: 13px 6px; font-size: 13px; font-weight: 600; border: none; background: none; cursor: pointer; color: var(--testo-muted); border-bottom: 3px solid transparent; transition: all 0.15s; }
+.nav-btn.active { color: var(--verde); border-bottom-color: var(--verde); }
+.nav-btn:hover:not(.active) { background: var(--grigio-bg); color: var(--testo-sec); }
+
+/* MAIN */
+.main { max-width: 900px; margin: 0 auto; padding: 1.25rem 1rem 5rem; }
+.section { display: none; }
+.section.active { display: block; }
+
+/* ===== CALENDARIO ===== */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.cal-day {
+  background: white;
+  border: 1px solid var(--grigio-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+.cal-day-header {
+  padding: 8px 8px 6px;
+  text-align: center;
+  background: var(--grigio-bg);
+  border-bottom: 1px solid var(--grigio-border);
+}
+.cal-day-name { font-size: 11px; font-weight: 700; color: var(--testo-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.cal-day-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 99px; margin-top: 4px; display: inline-block; }
+.badge-tennis { background: var(--blu-light); color: var(--blu); }
+.badge-riposo { background: var(--grigio-bg); color: var(--testo-muted); border: 1px solid var(--grigio-border); }
+.badge-libero { background: var(--arancio-light); color: var(--arancio); }
+
+.cal-meals { padding: 6px; flex: 1; display: flex; flex-direction: column; gap: 5px; }
+
+.meal-card {
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: grab;
+  border: 1.5px solid transparent;
+  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+  position: relative;
+  user-select: none;
+}
+.meal-card:active { cursor: grabbing; }
+.meal-card.dragging { opacity: 0.4; transform: scale(0.97); }
+.meal-card.drag-over { border-color: var(--verde); box-shadow: 0 0 0 2px var(--verde-light); }
+
+.meal-pranzo { background: #fff8e6; border-color: #f0d070; }
+.meal-spuntino { background: var(--verde-light); border-color: var(--verde-mid); }
+.meal-cena { background: #eef2ff; border-color: #b0bcf0; }
+
+.meal-time-label { font-size: 10px; font-weight: 700; margin-bottom: 2px; opacity: 0.7; display: flex; align-items: center; justify-content: space-between; }
+.meal-text-cal { font-size: 11px; color: var(--testo); }
+.edit-meal-btn { background: none; border: none; cursor: pointer; font-size: 11px; padding: 0 2px; color: var(--testo-muted); opacity: 0; transition: opacity 0.15s; }
+.meal-card:hover .edit-meal-btn { opacity: 1; }
+
+.drag-hint { font-size: 10px; color: var(--testo-muted); text-align: center; margin-top: 8px; opacity: 0.6; }
+
+/* Edit meal modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: var(--radius); padding: 20px; width: min(90%, 400px); box-shadow: var(--shadow); }
+.modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+.modal textarea { width: 100%; border: 1px solid var(--grigio-border); border-radius: var(--radius-sm); padding: 10px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 80px; }
+.modal-btns { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+.btn { padding: 8px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+.btn-primary { background: var(--verde); color: white; }
+.btn-secondary { background: var(--grigio-bg); color: var(--testo-sec); border: 1px solid var(--grigio-border); }
+
+/* ===== SPESA ===== */
+.spesa-top { background: white; border: 1px solid var(--grigio-border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+.spesa-top-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.spesa-top h2 { font-size: 16px; font-weight: 700; flex-shrink: 0; }
+.progress-wrap { flex: 1; min-width: 100px; background: var(--grigio-bg); border-radius: 99px; height: 8px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 99px; background: var(--verde); transition: width 0.3s; }
+.progress-label { font-size: 13px; font-weight: 600; color: var(--testo-muted); flex-shrink: 0; }
+.btn-sm { padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; }
+.btn-verde { background: var(--verde-light); color: var(--verde); }
+.btn-verde:hover { background: var(--verde-mid); }
+.btn-rosso { background: var(--rosso-light); color: var(--rosso); }
+.btn-rosso:hover { background: #f5c6c2; }
+
+.add-item-row { display: flex; gap: 8px; margin-top: 12px; }
+.add-item-row input { flex: 1; border: 1px solid var(--grigio-border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; font-family: inherit; }
+.add-item-row select { border: 1px solid var(--grigio-border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 13px; font-family: inherit; background: white; }
+
+.spesa-cat { margin-bottom: 18px; }
+.spesa-cat-header { display: flex; align-items: center; justify-content: space-between; padding: 5px 0 8px; border-bottom: 1px solid var(--grigio-border); margin-bottom: 4px; }
+.spesa-cat-title { font-size: 11px; font-weight: 700; color: var(--testo-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.spesa-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #f0efec; }
+.spesa-item:last-child { border-bottom: none; }
+.spesa-item input[type=checkbox] { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; accent-color: var(--verde); }
+.spesa-item label { font-size: 14px; cursor: pointer; transition: color 0.15s; flex: 1; }
+.spesa-item.done label { text-decoration: line-through; color: var(--testo-muted); }
+.del-btn { background: none; border: none; color: var(--testo-muted); cursor: pointer; font-size: 16px; padding: 2px 4px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+.spesa-item:hover .del-btn { opacity: 1; }
+
+/* ===== OBIETTIVI ===== */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.stat-card { background: white; border: 1px solid var(--grigio-border); border-radius: var(--radius-sm); padding: 14px; text-align: center; }
+.stat-label { font-size: 11px; color: var(--testo-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+.stat-val { font-size: 26px; font-weight: 700; color: var(--verde); }
+.stat-sub { font-size: 11px; color: var(--testo-muted); margin-top: 2px; }
+
+.ob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ob-left {}
+.ob-right {}
+
+/* Form peso */
+.peso-form { background: white; border: 1px solid var(--grigio-border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+.peso-form h3 { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+.form-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; }
+.form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.form-group label { font-size: 11px; font-weight: 600; color: var(--testo-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.form-group input { border: 1px solid var(--grigio-border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 14px; font-family: inherit; width: 100%; }
+.btn-aggiungi { background: var(--verde); color: white; padding: 9px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; align-self: flex-end; }
+
+.misurazioni-list { background: white; border: 1px solid var(--grigio-border); border-radius: var(--radius); overflow: hidden; }
+.mis-header { display: flex; font-size: 11px; font-weight: 700; color: var(--testo-muted); text-transform: uppercase; letter-spacing: 0.04em; padding: 8px 14px; background: var(--grigio-bg); border-bottom: 1px solid var(--grigio-border); }
+.mis-row { display: flex; align-items: center; padding: 9px 14px; border-bottom: 1px solid #f0efec; font-size: 13px; }
+.mis-row:last-child { border-bottom: none; }
+.mis-data { flex: 2; color: var(--testo-sec); }
+.mis-peso { flex: 1; font-weight: 700; }
+.mis-delta { flex: 1; font-size: 12px; }
+.mis-del { background: none; border: none; color: var(--testo-muted); cursor: pointer; font-size: 14px; opacity: 0; transition: opacity 0.15s; }
+.mis-row:hover .mis-del { opacity: 1; }
+.delta-pos { color: var(--rosso); }
+.delta-neg { color: var(--verde); }
+
+/* Grafico */
+.chart-card { background: white; border: 1px solid var(--grigio-border); border-radius: var(--radius); padding: 16px; }
+.chart-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.chart-legend { display: flex; gap: 14px; margin-bottom: 12px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--testo-sec); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.chart-wrap { position: relative; height: 220px; }
+
+.alert-box { background: var(--arancio-light); border: 1px solid #f0c080; border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 14px; }
+.alert-box p { font-size: 12px; color: #7a4010; line-height: 1.7; }
+
+/* ===== FAB + POPUP REGOLE ===== */
+.fab {
+  position: fixed; bottom: 24px; right: 20px; z-index: 200;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--verde); color: white;
+  border: none; cursor: pointer;
+  font-size: 22px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(45,122,79,0.4);
+  transition: transform 0.15s;
+}
+.fab:hover { transform: scale(1.08); }
+.fab:active { transform: scale(0.95); }
+
+.regole-popup {
+  display: none; position: fixed; bottom: 86px; right: 16px;
+  width: min(90vw, 360px); z-index: 199;
+  background: white; border-radius: var(--radius);
+  border: 1px solid var(--grigio-border);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  overflow: hidden;
+}
+.regole-popup.open { display: block; }
+.regole-popup-header { background: var(--verde); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+.regole-popup-header h3 { font-size: 15px; font-weight: 700; }
+.popup-close { background: none; border: none; color: white; font-size: 20px; cursor: pointer; line-height: 1; }
+.regole-popup-body { padding: 14px; max-height: 60vh; overflow-y: auto; }
+.regola-section { margin-bottom: 14px; }
+.regola-section h4 { font-size: 12px; font-weight: 700; color: var(--testo-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid var(--grigio-border); }
+.regola-section ul { list-style: none; }
+.regola-section li { font-size: 13px; color: var(--testo-sec); padding: 4px 0; line-height: 1.5; }
+.regola-section li::before { content: '· '; color: var(--verde); font-weight: 700; }
+
+/* RESPONSIVE */
+@media (max-width: 700px) {
+  .cal-grid { grid-template-columns: 1fr; gap: 8px; }
+  .cal-day { min-height: auto; }
+  .cal-meals { flex-direction: row; flex-wrap: wrap; gap: 5px; }
+  .meal-card { flex: 1; min-width: 140px; }
+  .ob-grid { grid-template-columns: 1fr; }
+  .form-row { flex-direction: column; }
+}
+@media (min-width: 701px) and (max-width: 900px) {
+  .cal-grid { grid-template-columns: repeat(4, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <h1>🎾 Piano Alimentare 16/8</h1>
+    <p>Acnologia97 · 29 anni · 104 kg · 2 match di tennis a settimana</p>
+    <div class="pillole">
+      <span class="pill">⏰ Finestra 14:00–21:30</span>
+      <span class="pill">💧 3,5 L/giorno</span>
+      <span class="pill">🏆 Dimagrimento + massa</span>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <div class="nav-inner">
+    <button class="nav-btn active" onclick="showTab('piano', this)">📅 Piano</button>
+    <button class="nav-btn" onclick="showTab('spesa', this)">🛒 Spesa</button>
+    <button class="nav-btn" onclick="showTab('obiettivi', this)">📉 Obiettivi</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- PIANO / CALENDARIO -->
+  <div id="tab-piano" class="section active">
+    <p class="drag-hint">✋ Trascina i pasti tra i giorni — solo tra stessa categoria (pranzo↔pranzo, cena↔cena, spuntino↔spuntino) · ✏️ Clicca la matitina per modificare il testo</p>
+    <br>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <!-- SPESA -->
+  <div id="tab-spesa" class="section">
+    <div class="spesa-top">
+      <div class="spesa-top-row">
+        <h2>🛒 Lista della spesa</h2>
+        <div class="progress-wrap"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+        <span class="progress-label" id="prog-label">0/0</span>
+        <button class="btn-sm btn-verde" onclick="resetSpesa()">↺ Reset</button>
+      </div>
+      <div class="add-item-row">
+        <select id="new-cat">
+          <option value="🗄️ Dispensa">🗄️ Dispensa</option>
+          <option value="🥩 Frigo / Macelleria">🥩 Frigo</option>
+          <option value="❄️ Surgelati">❄️ Surgelati</option>
+          <option value="🥦 Ortofrutta">🥦 Ortofrutta</option>
+        </select>
+        <input type="text" id="new-item-text" placeholder="Aggiungi articolo..." onkeydown="if(event.key==='Enter') addItem()">
+        <button class="btn btn-primary btn-sm" onclick="addItem()" style="border-radius:8px">+ Aggiungi</button>
+      </div>
+    </div>
+    <div id="spesa-content"></div>
+  </div>
+
+  <!-- OBIETTIVI -->
+  <div id="tab-obiettivi" class="section">
+    <div class="stat-grid" id="stat-cards"></div>
+    <div class="ob-grid">
+      <div class="ob-left">
+        <div class="peso-form">
+          <h3>📝 Registra misurazione</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Data</label>
+              <input type="date" id="inp-data">
+            </div>
+            <div class="form-group">
+              <label>Peso (kg)</label>
+              <input type="number" id="inp-peso" step="0.1" min="50" max="200" placeholder="es. 103.5">
+            </div>
+            <button class="btn-aggiungi" onclick="addMisurazione()">+ Aggiungi</button>
+          </div>
+        </div>
+        <div class="misurazioni-list" id="mis-list">
+          <div class="mis-header">
+            <span style="flex:2">Data</span>
+            <span style="flex:1">Peso</span>
+            <span style="flex:1">Variazione</span>
+            <span style="width:24px"></span>
+          </div>
+          <div id="mis-rows"></div>
+        </div>
+        <div class="alert-box" style="margin-top:12px">
+          <p>⚠️ <strong>Domenica mattina:</strong> dopo la pizza la bilancia può segnare +1,5 kg. È solo acqua — svanisce entro martedì. Non pesarti mai di domenica.</p>
+        </div>
+      </div>
+      <div class="ob-right">
+        <div class="chart-card">
+          <h3>📈 Andamento peso</h3>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#2d7a4f"></div> Reale</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#b0bcf0;border:1px dashed #7b90d0"></div> Prospettato</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="peso-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB REGOLE -->
+<button class="fab" onclick="toggleRegole()" title="Regole del piano" aria-label="Mostra regole">📋</button>
+
+<div class="regole-popup" id="regole-popup">
+  <div class="regole-popup-header">
+    <h3>📋 Regole del piano</h3>
+    <button class="popup-close" onclick="toggleRegole()">×</button>
+  </div>
+  <div class="regole-popup-body">
+    <div class="regola-section">
+      <h4>⏰ Finestra oraria</h4>
+      <ul>
+        <li><strong>14:00</strong> — Pranzo (carbo + proteine)</li>
+        <li><strong>17:30</strong> — Spuntino pre-allenamento</li>
+        <li><strong>21:30</strong> — Cena (ultimo pasto)</li>
+        <li>08:00–14:00: solo acqua, caffè nero o tisane</li>
+      </ul>
+    </div>
+    <div class="regola-section">
+      <h4>🫒 Condimenti fissi</h4>
+      <ul>
+        <li>Max 30g olio EVO al giorno</li>
+        <li>1 cucchiaio a pranzo, 2 a cena — sempre a crudo</li>
+        <li>Sale moderato · spezie libere (origano, pepe, curry)</li>
+        <li>Pentole antiaderenti obbligatorie</li>
+      </ul>
+    </div>
+    <div class="regola-section">
+      <h4>🎾 Giorni di tennis</h4>
+      <ul>
+        <li>Riso basmati al posto della pasta</li>
+        <li>Spuntino: banana + yogurt greco 0% grassi</li>
+        <li>Cena con patate lesse per il recupero</li>
+      </ul>
+    </div>
+    <div class="regola-section">
+      <h4>🍕 Sabato libero</h4>
+      <ul>
+        <li>Pranzo: solo pollo + zucchine, zero carbo</li>
+        <li>Cena libera — è nel piano, non uno sgarro</li>
+        <li>Non pesarti domenica mattina</li>
+      </ul>
+    </div>
+    <div class="regola-section">
+      <h4>💧 Idratazione</h4>
+      <ul>
+        <li>3,5 litri di acqua al giorno obbligatori</li>
+        <li>Mattina: acqua, caffè nero, tisane — zero cibo</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDIT PASTO -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <h3 id="modal-title">Modifica pasto</h3>
+    <textarea id="modal-text" rows="4"></textarea>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+      <button class="btn btn-primary" onclick="saveModal()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ============================================================
+// DATI
+// ============================================================
+const LS_PASTI = 'pa168_pasti';
+const LS_SPESA = 'pa168_spesa_stati';
+const LS_SPESA_ITEMS = 'pa168_spesa_items';
+const LS_MIS = 'pa168_misurazioni';
+
+const defaultGiorni = [
+  { nome: 'Lun', tipo: 'riposo', pasti: [
+    { cat: 'pranzo', ora: '14:00', testo: 'Pasta (100g) · tonno al naturale (2 lattine) · zucchine in padella' },
+    { cat: 'spuntino', ora: '17:30', testo: '1 pesca · 30g di mandorle' },
+    { cat: 'cena', ora: '21:30', testo: 'Petto di pollo (200g) · insalata mista e cetrioli · 2 fette di pane bianco' },
+  ]},
+  { nome: 'Mar', tipo: 'tennis', pasti: [
+    { cat: 'pranzo', ora: '14:00', testo: 'Riso basmati (100g) · petto di pollo a dadini (150g) · zucchine' },
+    { cat: 'spuntino', ora: '17:30', testo: '1 banana · 1 yogurt greco 0% grassi' },
+    { cat: 'cena', ora: '21:30', testo: 'Filetti di merluzzo (250g) al pomodoro · 200g patate lesse' },
+  ]},
+  { nome: 'Mer', tipo: 'riposo', pasti: [
+    { cat: 'pranzo', ora: '14:00', testo: 'Pasta (100g) · carne macinata (150g) con passata di pomodoro' },
+    { cat: 'spuntino', ora: '17:30', testo: '2 fette di melone giallo · 30g di noci' },
+    { cat: 'cena', ora: '21:30', testo: 'Frittata (3 uova) · fagiolini lessati · 2 fette di pane bianco' },
+  ]},
+  { nome: 'Gio', tipo: 'tennis', pasti: [
+    { cat: 'pranzo', ora: '14:00', testo: 'Riso basmati (100g) · tonno al naturale (2 lattine) · zucchine' },
+    { cat: 'spuntino', ora: '17:30', testo: '1 banana · 1 yogurt greco 0% grassi' },
+    { cat: 'cena', ora: '21:30', testo: 'Petto di pollo (200g) · insalata mista e pomodori · 200g patate lesse' },
+  ]},
+  { nome: 'Ven', tipo: 'riposo', pasti: [
+    { cat: 'pranzo', ora: '14:00', testo: 'Pasta (100g) · carne macinata (150g) · zucchine in padella' },
+    { cat: 'spuntino', ora: '17:30', testo: '4 albicocche · 30g di mandorle' },
+    { cat: 'cena', ora: '21:30', testo: 'Filetti di merluzzo (250g) alla piastra · fagiolini · 2 fette di pane bianco' },
+  ]},
+  { nome: 'Sab', tipo: 'libero', pasti: [
+    { cat: 'pranzo', ora: '14:00', testo: 'Solo petto di pollo (150g) alla piastra · zucchine — niente carboidrati!' },
+    { cat: 'spuntino', ora: '17:30', testo: '1 pesca · 30g di noci' },
+    { cat: 'cena', ora: '21:30', testo: '🍕 Pizza ricca (rossa, mozzarella, olive, nduja, salame, salsiccia) + patatine fritte' },
+  ]},
+  { nome: 'Dom', tipo: 'riposo', pasti: [
+    { cat: 'pranzo', ora: '14:00', testo: 'Pasta (100g) · tonno al naturale (2 lattine) · passata di pomodoro' },
+    { cat: 'spuntino', ora: '17:30', testo: '4 albicocche · 30g di mandorle' },
+    { cat: 'cena', ora: '21:30', testo: 'Carne macinata svizzera (200g) · fagiolini lessati · 2 fette di pane bianco' },
+  ]},
+];
+
+const defaultSpesa = [
+  { cat: '🗄️ Dispensa', items: ['Riso Basmati (1 pacco)', 'Pasta classica (1 pacco)', 'Pane bianco a fette (congela quello in eccesso)', 'Tonno al naturale (6 lattine grandi)', 'Passata di pomodoro (2 bottiglie)', 'Olio Extravergine di Oliva (EVO)', 'Mandorle sgusciate (1 sacchetto)', 'Noci sgusciate (1 sacchetto)'] },
+  { cat: '🥩 Frigo / Macelleria', items: ['Uova medie (confezione da 6 o 10)', 'Yogurt Greco 0% grassi (2 vasetti)', 'Petto di pollo o tacchino fresco (1 kg — taglia e congela)', 'Carne macinata magra di bovino (500g — dividi e congela)'] },
+  { cat: '❄️ Surgelati', items: ['Filetti di merluzzo / nasello senza spine (1–2 buste)', 'Fagiolini verdi surgelati (1–2 buste)'] },
+  { cat: '🥦 Ortofrutta', items: ['Patate (rete 1–2 kg)', 'Zucchine fresche (1 kg)', 'Insalata mista in busta (2–3 buste)', 'Pomodori da insalata (1 kg)', 'Cetrioli (3–4 pezzi)', 'Banane (3 — prendile verdi)', 'Pesche o nettarine (2–3)', 'Melone giallo intero (1)', 'Albicocche fresche (4–5)'] },
+];
+
+// Obiettivi prospettici (mese -> peso atteso)
+const prospettiva = [
+  { mese: 0, peso: 104 },
+  { mese: 1, peso: 100 },
+  { mese: 3, peso: 94.5 },
+  { mese: 6, peso: 87 },
+];
+
+// ============================================================
+// STATO
+// ============================================================
+let giorni = JSON.parse(localStorage.getItem(LS_PASTI) || 'null') || JSON.parse(JSON.stringify(defaultGiorni));
+let spesaItems = JSON.parse(localStorage.getItem(LS_SPESA_ITEMS) || 'null') || JSON.parse(JSON.stringify(defaultSpesa));
+let spesaStati = JSON.parse(localStorage.getItem(LS_SPESA) || '{}');
+let misurazioni = JSON.parse(localStorage.getItem(LS_MIS) || '[]');
+
+function savePasti() { localStorage.setItem(LS_PASTI, JSON.stringify(giorni)); }
+function saveSpesaItems() { localStorage.setItem(LS_SPESA_ITEMS, JSON.stringify(spesaItems)); }
+function saveSpesaStati() { localStorage.setItem(LS_SPESA, JSON.stringify(spesaStati)); }
+function saveMis() { localStorage.setItem(LS_MIS, JSON.stringify(misurazioni)); }
+
+// ============================================================
+// TABS
+// ============================================================
+function showTab(nome, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + nome).classList.add('active');
+  btn.classList.add('active');
+  if (nome === 'obiettivi') renderChart();
+}
+
+// ============================================================
+// CALENDARIO / PIANO
+// ============================================================
+let dragSrc = null; // { gi, pi }
+
+function buildCalendario() {
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  giorni.forEach((g, gi) => {
+    const col = document.createElement('div');
+    col.className = 'cal-day';
+    const tipoLabel = g.tipo === 'tennis' ? '🎾 Tennis' : g.tipo === 'libero' ? '🍕 Libero' : 'Riposo';
+    col.innerHTML = `
+      <div class="cal-day-header">
+        <div class="cal-day-name">${g.nome}</div>
+        <span class="cal-day-badge badge-${g.tipo}">${tipoLabel}</span>
+      </div>
+      <div class="cal-meals" id="meals-${gi}"></div>`;
+    grid.appendChild(col);
+
+    g.pasti.forEach((p, pi) => {
+      const card = createMealCard(gi, pi, p);
+      document.getElementById('meals-' + gi).appendChild(card);
+    });
+  });
+}
+
+function createMealCard(gi, pi, p) {
+  const card = document.createElement('div');
+  const catClass = { pranzo: 'meal-pranzo', spuntino: 'meal-spuntino', cena: 'meal-cena' }[p.cat] || 'meal-pranzo';
+  card.className = `meal-card ${catClass}`;
+  card.draggable = true;
+  card.dataset.gi = gi;
+  card.dataset.pi = pi;
+  card.dataset.cat = p.cat;
+  card.innerHTML = `
+    <div class="meal-time-label">
+      <span>${p.ora} · ${p.cat}</span>
+      <button class="edit-meal-btn" onclick="openEditModal(${gi},${pi})" title="Modifica">✏️</button>
+    </div>
+    <div class="meal-text-cal">${p.testo}</div>`;
+
+  card.addEventListener('dragstart', e => {
+    dragSrc = { gi: parseInt(card.dataset.gi), pi: parseInt(card.dataset.pi), cat: card.dataset.cat };
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  card.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (dragSrc && card.dataset.cat === dragSrc.cat && !(card.dataset.gi == dragSrc.gi && card.dataset.pi == dragSrc.pi)) {
+      card.classList.add('drag-over');
+      e.dataTransfer.dropEffect = 'move';
+    } else {
+      e.dataTransfer.dropEffect = 'none';
+    }
+  });
+  card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+  card.addEventListener('drop', e => {
+    e.preventDefault();
+    card.classList.remove('drag-over');
+    if (!dragSrc) return;
+    const dstGi = parseInt(card.dataset.gi);
+    const dstPi = parseInt(card.dataset.pi);
+    const srcCat = dragSrc.cat;
+    const dstCat = card.dataset.cat;
+    if (srcCat !== dstCat) return; // sicurezza
+    // swap
+    const tmp = giorni[dragSrc.gi].pasti[dragSrc.pi].testo;
+    giorni[dragSrc.gi].pasti[dragSrc.pi].testo = giorni[dstGi].pasti[dstPi].testo;
+    giorni[dstGi].pasti[dstPi].testo = tmp;
+    savePasti();
+    buildCalendario();
+    dragSrc = null;
+  });
+  return card;
+}
+
+// Modal edit
+let editTarget = null;
+function openEditModal(gi, pi) {
+  editTarget = { gi, pi };
+  document.getElementById('modal-title').textContent = `Modifica ${giorni[gi].pasti[pi].cat} — ${giorni[gi].nome}`;
+  document.getElementById('modal-text').value = giorni[gi].pasti[pi].testo;
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeModal() { document.getElementById('edit-modal').classList.remove('open'); editTarget = null; }
+function saveModal() {
+  if (!editTarget) return;
+  giorni[editTarget.gi].pasti[editTarget.pi].testo = document.getElementById('modal-text').value.trim();
+  savePasti();
+  buildCalendario();
+  closeModal();
+}
+document.getElementById('edit-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// ============================================================
+// SPESA
+// ============================================================
+function buildSpesa() {
+  const c = document.getElementById('spesa-content');
+  c.innerHTML = '';
+  spesaItems.forEach((cat, ci) => {
+    const sec = document.createElement('div');
+    sec.className = 'spesa-cat';
+    sec.innerHTML = `
+      <div class="spesa-cat-header">
+        <span class="spesa-cat-title">${cat.cat}</span>
+      </div>`;
+    cat.items.forEach((item, ii) => {
+      const key = `${ci}-${ii}`;
+      const done = !!spesaStati[key];
+      const row = document.createElement('div');
+      row.className = 'spesa-item' + (done ? ' done' : '');
+      row.id = `row-${ci}-${ii}`;
+      row.innerHTML = `
+        <input type="checkbox" id="cb-${ci}-${ii}" ${done ? 'checked' : ''} onchange="toggleItem(${ci},${ii})">
+        <label for="cb-${ci}-${ii}">${item}</label>
+        <button class="del-btn" onclick="delItem(${ci},${ii})" title="Rimuovi">🗑</button>`;
+      sec.appendChild(row);
+    });
+    c.appendChild(sec);
+  });
+  aggiornaProgress();
+}
+
+function toggleItem(ci, ii) {
+  const key = `${ci}-${ii}`;
+  spesaStati[key] = document.getElementById(`cb-${ci}-${ii}`).checked;
+  document.getElementById(`row-${ci}-${ii}`).classList.toggle('done', spesaStati[key]);
+  saveSpesaStati();
+  aggiornaProgress();
+}
+
+function delItem(ci, ii) {
+  // rimuovo anche lo stato
+  const oldKey = `${ci}-${ii}`;
+  spesaItems[ci].items.splice(ii, 1);
+  // ricalcolo stati (shift down)
+  const newStati = {};
+  spesaItems.forEach((cat, c2) => {
+    cat.items.forEach((_, i2) => {
+      const nk = `${c2}-${i2}`;
+      const ok = c2 === ci && i2 >= ii ? `${c2}-${i2+1}` : `${c2}-${i2}`;
+      newStati[nk] = spesaStati[ok] || false;
+    });
+  });
+  spesaStati = newStati;
+  saveSpesaItems();
+  saveSpesaStati();
+  buildSpesa();
+}
+
+function addItem() {
+  const txt = document.getElementById('new-item-text').value.trim();
+  const catName = document.getElementById('new-cat').value;
+  if (!txt) return;
+  const ci = spesaItems.findIndex(c => c.cat === catName);
+  if (ci >= 0) {
+    spesaItems[ci].items.push(txt);
+  } else {
+    spesaItems.push({ cat: catName, items: [txt] });
+  }
+  document.getElementById('new-item-text').value = '';
+  saveSpesaItems();
+  buildSpesa();
+}
+
+function resetSpesa() {
+  spesaStati = {};
+  saveSpesaStati();
+  buildSpesa();
+}
+
+function aggiornaProgress() {
+  let total = 0, done = 0;
+  spesaItems.forEach((cat, ci) => {
+    cat.items.forEach((_, ii) => {
+      total++;
+      if (spesaStati[`${ci}-${ii}`]) done++;
+    });
+  });
+  document.getElementById('prog-label').textContent = `${done}/${total}`;
+  document.getElementById('prog').style.width = total ? Math.round(done / total * 100) + '%' : '0%';
+}
+
+// ============================================================
+// OBIETTIVI
+// ============================================================
+function buildStatCards() {
+  const pesoAttuale = misurazioni.length ? misurazioni[misurazioni.length - 1].peso : 104;
+  const pesoInizio = 104;
+  const diff = (pesoAttuale - pesoInizio).toFixed(1);
+  const diffStr = diff > 0 ? '+' + diff : diff;
+
+  document.getElementById('stat-cards').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Peso iniziale</div><div class="stat-val">104 kg</div><div class="stat-sub">punto di partenza</div></div>
+    <div class="stat-card"><div class="stat-label">Peso attuale</div><div class="stat-val">${pesoAttuale} kg</div><div class="stat-sub">${diffStr} kg dal via</div></div>
+    <div class="stat-card"><div class="stat-label">Obiettivo 6 mesi</div><div class="stat-val">~87 kg</div><div class="stat-sub">–17 kg totali</div></div>
+    <div class="stat-card"><div class="stat-label">Misurazioni</div><div class="stat-val">${misurazioni.length}</div><div class="stat-sub">registrate</div></div>`;
+}
+
+function buildMisurazioni() {
+  const rows = document.getElementById('mis-rows');
+  rows.innerHTML = '';
+  if (misurazioni.length === 0) {
+    rows.innerHTML = '<div style="padding:16px;text-align:center;color:var(--testo-muted);font-size:13px">Nessuna misurazione ancora — aggiungila sopra!</div>';
+    return;
+  }
+  [...misurazioni].reverse().forEach((m, ri) => {
+    const realIdx = misurazioni.length - 1 - ri;
+    const prev = realIdx > 0 ? misurazioni[realIdx - 1].peso : 104;
+    const delta = (m.peso - prev).toFixed(1);
+    const deltaClass = delta > 0 ? 'delta-pos' : 'delta-neg';
+    const deltaStr = delta > 0 ? '+' + delta + ' kg' : delta + ' kg';
+    const row = document.createElement('div');
+    row.className = 'mis-row';
+    row.innerHTML = `
+      <span class="mis-data">${formatData(m.data)}</span>
+      <span class="mis-peso">${m.peso} kg</span>
+      <span class="mis-delta ${deltaClass}">${deltaStr}</span>
+      <button class="mis-del" onclick="delMisurazione(${realIdx})" title="Elimina">🗑</button>`;
+    rows.appendChild(row);
+  });
+}
+
+function formatData(str) {
+  if (!str) return '';
+  const [y, m, d] = str.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function addMisurazione() {
+  const data = document.getElementById('inp-data').value;
+  const peso = parseFloat(document.getElementById('inp-peso').value);
+  if (!data || isNaN(peso) || peso < 50 || peso > 250) {
+    alert('Inserisci data e peso validi');
+    return;
+  }
+  misurazioni.push({ data, peso });
+  misurazioni.sort((a, b) => a.data.localeCompare(b.data));
+  saveMis();
+  buildStatCards();
+  buildMisurazioni();
+  renderChart();
+  document.getElementById('inp-peso').value = '';
+}
+
+function delMisurazione(idx) {
+  misurazioni.splice(idx, 1);
+  saveMis();
+  buildStatCards();
+  buildMisurazioni();
+  renderChart();
+}
+
+// Imposta data di oggi di default
+function setDefaultDate() {
+  const today = new Date();
+  const iso = today.toISOString().split('T')[0];
+  document.getElementById('inp-data').value = iso;
+}
+
+// ============================================================
+// GRAFICO
+// ============================================================
+let chartInstance = null;
+function renderChart() {
+  const canvas = document.getElementById('peso-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Calcola data inizio (prima misurazione o oggi)
+  const startDate = misurazioni.length > 0
+    ? new Date(misurazioni[0].data)
+    : new Date();
+
+  // Genera dati prospettici mensili
+  const prosLabels = [], prosData = [];
+  prospettiva.forEach(p => {
+    const d = new Date(startDate);
+    d.setMonth(d.getMonth() + p.mese);
+    prosLabels.push(d.toLocaleDateString('it-IT', { month: 'short', year: '2-digit' }));
+    prosData.push(p.peso);
+  });
+
+  // Dati reali
+  const realLabels = misurazioni.map(m => formatData(m.data));
+  const realData = misurazioni.map(m => m.peso);
+
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: prosLabels,
+      datasets: [
+        {
+          label: 'Prospettato',
+          data: prosData,
+          borderColor: '#b0bcf0',
+          backgroundColor: 'rgba(176,188,240,0.1)',
+          borderDash: [6, 4],
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#b0bcf0',
+          tension: 0.3,
+        },
+        {
+          label: 'Reale',
+          data: realData.length > 0 ? (() => {
+            // Allineo i dati reali sull'asse delle label
+            const arr = new Array(prosLabels.length).fill(null);
+            // Inserisco i dati reali come punti aggiuntivi
+            return null;
+          })() : null,
+          borderColor: '#2d7a4f',
+          backgroundColor: 'rgba(45,122,79,0.1)',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: '#2d7a4f',
+          tension: 0.3,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          min: Math.min(85, ...(realData.length ? realData : [104])) - 2,
+          max: 106,
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          ticks: { font: { size: 11 }, callback: v => v + ' kg' }
+        },
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+
+  // Se ci sono dati reali, li aggiungo in un secondo dataset con asse libero
+  if (realData.length > 0 && chartInstance) {
+    chartInstance.destroy();
+    // Costruisco labels uniche ordinate
+    const allLabels = [...new Set([...prosLabels, ...realLabels])].sort();
+    const prosMap = {};
+    prosLabels.forEach((l, i) => prosMap[l] = prosData[i]);
+    const realMap = {};
+    realLabels.forEach((l, i) => realMap[l] = realData[i]);
+
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: allLabels,
+        datasets: [
+          {
+            label: 'Prospettato',
+            data: allLabels.map(l => prosMap[l] ?? null),
+            borderColor: '#b0bcf0',
+            borderDash: [6, 4],
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: '#b0bcf0',
+            tension: 0.3,
+            spanGaps: false,
+          },
+          {
+            label: 'Reale',
+            data: allLabels.map(l => realMap[l] ?? null),
+            borderColor: '#2d7a4f',
+            backgroundColor: 'rgba(45,122,79,0.08)',
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointBackgroundColor: '#2d7a4f',
+            tension: 0.3,
+            spanGaps: false,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            min: Math.min(84, ...realData) - 1,
+            max: 107,
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { font: { size: 11 }, callback: v => v + ' kg' }
+          },
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+}
+
+// ============================================================
+// FAB REGOLE
+// ============================================================
+function toggleRegole() {
+  document.getElementById('regole-popup').classList.toggle('open');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+buildCalendario();
+buildSpesa();
+buildStatCards();
+buildMisurazioni();
+setDefaultDate();
+</script>
+</body>
+</html>
